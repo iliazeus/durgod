@@ -360,6 +360,19 @@ class Key:
     BRIGHTNESS_DOWN = BRID = None
 
 
+class RgbMode:
+    PLAY = 0x0
+    PAUSE = 0x1
+    RAINBOW = 0x2
+    TWO_COLORS = 0x3
+    CHRISTMAS = 0x4
+    TRACKS = 0x5
+    LASERS = 0x6
+    WAVES = 0x7
+    SNAKE = 0x8
+    TYPING_SPEED = 0x9
+
+
 class Keyboard:
     # ID 2f68:0081 Hoksi Technology DURGOD Taurus K320 Nebula
     VENDOR_ID = 0x2f68
@@ -369,7 +382,7 @@ class Keyboard:
     KEYMAP_ENTRY_LENGTH = 8
     KEYMAP_ENTRY_COUNT = 16
 
-    DEFAULT_KEYMAP = [
+    DEFAULT_KEYMAP = [  # noqa
         Key.ESC,    Key.NONE,   Key.F1,     Key.F2,     Key.F3,     Key.F4,     Key.F5,     Key.F6,
         Key.F7,     Key.F8,     Key.F9,     Key.F10,    Key.F11,    Key.F12,    Key.PSCR,   Key.SLCK,
         Key.PAUSE,  Key.NONE,   Key.NONE,   Key.NONE,   Key.NONE,
@@ -403,7 +416,8 @@ class Keyboard:
 
     # channel order: 0xrrggbb
     # order is the same as in keymap, but in groups of 14
-    DEFAULT_COLORMAP = [0x000000] * COLORMAP_ENTRY_LENGTH * COLORMAP_ENTRY_COUNT
+    DEFAULT_COLORMAP = [0x000000] * \
+        COLORMAP_ENTRY_LENGTH * COLORMAP_ENTRY_COUNT
 
     def _pad_to_64(list):
         return list + [0x00] * (64 - len(list))
@@ -412,7 +426,10 @@ class Keyboard:
         # a small timeout to wait until all keys are released
         time.sleep(0.2)
 
-        device = usb.core.find(idVendor=Keyboard.VENDOR_ID, idProduct=Keyboard.PRODUCT_ID)
+        device = usb.core.find(
+            idVendor=Keyboard.VENDOR_ID,
+            idProduct=Keyboard.PRODUCT_ID,
+        )
 
         if device is None:
             return None
@@ -430,28 +447,28 @@ class Keyboard:
         if self.device.is_kernel_driver_active(interface.index):
             self.device.detach_kernel_driver(interface.index)
 
-    def _write(self, msg, pad_width=None):
-        if pad_width is not None:
-            msg = msg + [0x00] * (pad_width - len(msg))
+    def _write(self, msg, pad_length=None):
+        if pad_length is not None:
+            msg = msg + [0x00] * (pad_length - len(msg))
         self.device.write(Keyboard.ENDPOINT, msg)
 
     def _write_keymap_start(self):
-        self._write([0x03, 0x05, 0x80, 0x04, 0xff], pad_width=64)
+        self._write([0x03, 0x05, 0x80, 0x04, 0xff], pad_length=64)
 
     def _write_keymap_entry(self, index):
         msg = [0x03, 0x05, 0x81, 0x0f]
         msg += list(index.to_bytes(4, byteorder='little'))
 
         length = Keyboard.KEYMAP_ENTRY_LENGTH
-        entry = self.keymap[length * index : length * (index + 1)]
+        entry = self.keymap[length * index:length * (index + 1)]
 
         for key in entry:
             msg += list(key.to_bytes(4, byteorder='little'))
 
-        self._write(msg, pad_width=64)
+        self._write(msg, pad_length=64)
 
     def _write_keymap_end(self):
-        self._write([0x03, 0x05, 0x82], pad_width=64)
+        self._write([0x03, 0x05, 0x82], pad_length=64)
 
     def apply_keymap(self):
         self._write_keymap_start()
@@ -461,29 +478,65 @@ class Keyboard:
 
         self._write_keymap_end()
 
+    def _write_rgb_mode(
+        self,
+        mode,
+        direction,
+        color1,
+        speed,
+        brightness,
+        base_speed,
+        color2,
+    ):
+        msg = [0x03, 0x06, 0x80]
+        msg += [mode & 0xff]
+        msg += [direction & 0xff]
+        msg += [0x00]
+        msg += list(color1.to_bytes(3, byteorder='big'))
+        msg += [speed & 0xff]
+        msg += [brightness & 0xff]
+        msg += [base_speed & 0xff]
+        msg += list(color2.to_bytes(3, byteorder='big'))
+
+        self._write(msg, pad_length=64)
+
+    def apply_rgb_mode(
+        self,
+        mode=RgbMode.PLAY,
+        direction=0,
+        color1=0xffffff,
+        speed=2,
+        brightness=9,
+        base_speed=1,
+        color2=0xffffff,
+    ):
+        self._write_rgb_mode(
+            mode=mode,
+            direction=direction,
+            color1=color1,
+            speed=speed,
+            brightness=brightness,
+            base_speed=base_speed,
+            color2=color2,
+        )
+
     def _write_rgb_pause(self):
-        self._write([0x03, 0x19, 0x66], pad_width=64)
+        self._write([0x03, 0x19, 0x66], pad_length=64)
 
     def _write_colormap_entry(self, index):
         msg = [0x03, 0x18, 0x08]
         msg += [index & 0xff]
 
         length = Keyboard.COLORMAP_ENTRY_LENGTH
-        entry = self.colormap[length * index : length * (index + 1)]
+        entry = self.colormap[length * index: length * (index + 1)]
 
         for key in entry:
             msg += list(key.to_bytes(3, byteorder='big'))
 
-        self._write(msg, pad_width=64)
+        self._write(msg, pad_length=64)
 
     def _write_rgb_reset(self):
-        self._write([0x03, 0x19, 0x88], pad_width=64)
-
-    def _write_rgb_mode(self, effect, color, speed, brightness):
-        self._write([0x03, 0x06, 0x80, effect, 0x00, 0x00, color.to_bytes(3, byteorder='big'), speed, brightness], pad_width=64)
-
-    def apply_rgb_mode(self, effect=0, speed=2, brightness=9):
-        self._write_rgb_mode(effect=effect, speed=speed, brightness=brightness)
+        self._write([0x03, 0x19, 0x88], pad_length=64)
 
     def apply_colormap(self):
         self._write_rgb_pause()
@@ -493,6 +546,7 @@ class Keyboard:
 
         self._write_rgb_reset()
 
+
 if __name__ == "__main__":
     kb = Keyboard.find()
 
@@ -500,12 +554,12 @@ if __name__ == "__main__":
         raise ValueError('device not found')
 
     #kb.keymap[Matrix.SCROLLLOCK] = Key.MOD_LSHIFT | Key.Z
-    #kb.apply_keymap()
+    # kb.apply_keymap()
 
     #kb.colormap[Matrix.Z] = 0xff0000
     #kb.colormap[Matrix.E] = 0xff0000
     #kb.colormap[Matrix.U] = 0xff0000
     #kb.colormap[Matrix.S] = 0xff0000
-    #kb.apply_colormap()
+    # kb.apply_colormap()
 
-    kb.apply_rgb_mode(effect=3, speed=2, brightness=4)
+    kb.apply_rgb_mode(mode=RgbMode.WAVES, speed=2, brightness=4)
