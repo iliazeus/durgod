@@ -144,6 +144,13 @@ class Key:
     MOD_RALT = MOD_ROPT = MOD_ALGR = 0x4000
     MOD_RGUI = MOD_RCMD = MOD_RWIN = 0x8000
 
+    # since they are set in the keymap,
+    # it makes sense to define these here
+    WINLOCK_ALT_TAB = 0x01
+    WINLOCK_ALT_F4 = 0x02
+    WINLOCK_SHIFT_TAB = 0x03
+    WINLOCK_WIN = 0x08
+
     A = 0x00040000
     B = 0x00050000
     C = 0x00060000
@@ -413,7 +420,9 @@ class Keyboard:
 
                     Key.LCTRL,  Key.LGUI,   Key.LALT,   Key.NONE,   Key.NONE,   Key.NONE,   Key.SPACE,
         Key.NONE,   Key.NONE,   Key.NONE,   Key.RALT,   Key.FN,     Key.APP,    Key.RCTRL,  Key.LEFT,
-        Key.DOWN,   Key.RIGHT,  Key.NONE,   Key.NONE,   Key.NONE,   Key.NONE,   0x00000008, Key.MAGIC_PADDING,
+        Key.DOWN,   Key.RIGHT,  Key.NONE,   Key.NONE,   Key.NONE,   Key.NONE,
+
+        Key.WINLOCK_WIN, Key.MAGIC_PADDING,
     ]
 
     COLORMAP_ENTRY_LENGTH = 14
