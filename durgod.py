@@ -370,7 +370,7 @@ class Key:
     BRIGHTNESS_DOWN = BRID = None
 
 
-class RgbMode:
+class RgbEffect:
     PLAY = 0x0
     PAUSE = 0x1
     RAINBOW = 0x2
@@ -490,7 +490,11 @@ class Keyboard:
 
         self._write_keymap_end()
 
-    def _write_rgb_mode(
+    def _write_rgb_state(self, state):
+        msg = [0x03, 0x06, 0x86, state & 0xff]
+        self._write(msg, pad_length=64)
+
+    def _write_rgb_effect(
         self,
         mode,
         direction,
@@ -512,30 +516,18 @@ class Keyboard:
 
         self._write(msg, pad_length=64)
 
-    def apply_rgb_mode(
-        self,
-        mode=RgbMode.PLAY,
-        direction=0,
-        color1=0xffffff,
-        speed=2,
-        brightness=9,
-        base_speed=1,
-        color2=0xffffff,
-    ):
-        self._write_rgb_mode(
-            mode=mode,
-            direction=direction,
-            color1=color1,
-            speed=speed,
-            brightness=brightness,
-            base_speed=base_speed,
-            color2=color2,
-        )
+    def _write_rgb_brightness(self, brightness):
+        msg = [0x03, 0x06, 0x82, brightness & 0xff]
+        self._write(msg, pad_length=64)
 
-    def _write_rgb_pause(self):
+    def _write_rgb_speed(self, speed):
+        msg = [0x03, 0x06, 0x83, speed & 0xff]
+        self._write(msg, pad_length=64)
+
+    def _write_rgb_colormap_start(self):
         self._write([0x03, 0x19, 0x66], pad_length=64)
 
-    def _write_colormap_entry(self, index):
+    def _write_rgb_colormap_entry(self, index):
         msg = [0x03, 0x18, 0x08]
         msg += [index & 0xff]
 
@@ -547,16 +539,41 @@ class Keyboard:
 
         self._write(msg, pad_length=64)
 
-    def _write_rgb_reset(self):
+    def _write_rgb_colormap_end(self):
         self._write([0x03, 0x19, 0x88], pad_length=64)
 
-    def apply_colormap(self):
-        self._write_rgb_pause()
+    def disable_rgb(self):
+        self._write_rgb_state(1)
+
+    def apply_rgb_effect(
+        self,
+        effect=RgbEffect.PLAY,
+        direction=0,
+        color1=0xffffff,
+        speed=2,
+        brightness=9,
+        base_speed=1,
+        color2=0xffffff,
+    ):
+        self._write_rgb_state(0)
+        self._write_rgb_effect(
+            mode=effect,
+            direction=direction,
+            color1=color1,
+            speed=speed,
+            brightness=brightness,
+            base_speed=base_speed,
+            color2=color2,
+        )
+
+    def apply_rgb_colormap(self):
+        self._write_rgb_state(1)
+        self._write_rgb_colormap_start()
 
         for index in range(0, Keyboard.COLORMAP_ENTRY_COUNT):
-            self._write_colormap_entry(index)
+            self._write_rgb_colormap_entry(index)
 
-        self._write_rgb_reset()
+        self._write_rgb_colormap_end()
 
 
 if __name__ == "__main__":
@@ -565,13 +582,21 @@ if __name__ == "__main__":
     if kb is None:
         raise ValueError('device not found')
 
-    kb.keymap[Matrix.SCROLLLOCK] = Key.MOD_LSHIFT | Key.Z
-    kb.apply_keymap()
+    # kb.keymap[Matrix.SCROLLLOCK] = Key.MOD_LSHIFT | Key.Z
+    # kb.apply_keymap()
 
-    #kb.colormap[Matrix.Z] = 0xff0000
-    #kb.colormap[Matrix.E] = 0xff0000
-    #kb.colormap[Matrix.U] = 0xff0000
-    #kb.colormap[Matrix.S] = 0xff0000
-    # kb.apply_colormap()
+    kb.colormap[Matrix.Z] = 0xff0000
+    kb.apply_rgb_colormap()
+    time.sleep(0.5)
 
-    # kb.apply_rgb_mode(mode=RgbMode.WAVES, speed=2, brightness=4)
+    kb.colormap[Matrix.Z] = 0x00ff00
+    kb.apply_rgb_colormap()
+    time.sleep(0.5)
+
+    kb.colormap[Matrix.Z] = 0x0000ff
+    kb.apply_rgb_colormap()
+    time.sleep(0.5)
+
+    kb.apply_rgb_effect()
+
+    # kb.apply_rgb_effect(RgbMode.WAVES, speed=2, brightness=4)
