@@ -2,6 +2,16 @@ import time
 import usb
 
 
+# These are the `idProduct`s of the USB spec
+# TODO: ids of other supported keyboards
+class KeyboardId:
+    # ID 2f68:0082 Hoksi Technology DURGOD Taurus K320
+    K320 = 0x0082
+
+    # ID 2f68:0081 Hoksi Technology DURGOD Taurus K320 Nebula
+    K320_NEBULA = 0x0081
+
+
 # Names match with https://beta.docs.qmk.fm/using-qmk/simple-keycodes
 # TODO: hypothetical numpad indices
 class Matrix:
@@ -374,11 +384,6 @@ class RgbMode:
 
 
 class Keyboard:
-    # ID 2f68:0081 Hoksi Technology DURGOD Taurus K320 Nebula
-    VENDOR_ID = 0x2f68
-    PRODUCT_ID = 0x0081
-    ENDPOINT = 0x03
-
     KEYMAP_ENTRY_LENGTH = 8
     KEYMAP_ENTRY_COUNT = 16
 
@@ -422,14 +427,21 @@ class Keyboard:
     def _pad_to_64(list):
         return list + [0x00] * (64 - len(list))
 
-    def find():
+    def find(product_id=None, vendor_id=0x2f68):
         # a small timeout to wait until all keys are released
         time.sleep(0.2)
 
-        device = usb.core.find(
-            idVendor=Keyboard.VENDOR_ID,
-            idProduct=Keyboard.PRODUCT_ID,
-        )
+        device = None
+
+        if product_id is not None:
+            device = usb.core.find(
+                idVendor=vendor_id,
+                idProduct=product_id,
+            )
+        else:
+            device = usb.core.find(
+                idVendor=vendor_id,
+            )
 
         if device is None:
             return None
@@ -450,7 +462,7 @@ class Keyboard:
     def _write(self, msg, pad_length=None):
         if pad_length is not None:
             msg = msg + [0x00] * (pad_length - len(msg))
-        self.device.write(Keyboard.ENDPOINT, msg)
+        self.device.write(0x03, msg)
 
     def _write_keymap_start(self):
         self._write([0x03, 0x05, 0x80, 0x04, 0xff], pad_length=64)
@@ -553,8 +565,8 @@ if __name__ == "__main__":
     if kb is None:
         raise ValueError('device not found')
 
-    #kb.keymap[Matrix.SCROLLLOCK] = Key.MOD_LSHIFT | Key.Z
-    # kb.apply_keymap()
+    kb.keymap[Matrix.SCROLLLOCK] = Key.MOD_LSHIFT | Key.Z
+    kb.apply_keymap()
 
     #kb.colormap[Matrix.Z] = 0xff0000
     #kb.colormap[Matrix.E] = 0xff0000
@@ -562,4 +574,4 @@ if __name__ == "__main__":
     #kb.colormap[Matrix.S] = 0xff0000
     # kb.apply_colormap()
 
-    kb.apply_rgb_mode(mode=RgbMode.WAVES, speed=2, brightness=4)
+    # kb.apply_rgb_mode(mode=RgbMode.WAVES, speed=2, brightness=4)
