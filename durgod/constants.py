@@ -12,6 +12,7 @@ class VendorId(enum.IntEnum):
     """Zhuhai Hoksi Technology Co., Ltd."""
 
 
+# TODO: other models
 class KeyboardId(enum.IntEnum):
     """`idProduct` of the USB spec for Taurus keyboards."""
 

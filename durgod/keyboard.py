@@ -47,6 +47,62 @@ class Colormap:
         return self.colors[start:end]
 
 
+class Layout:
+    """
+    Represents the physical keyboard layout.
+
+    The format is inspired by https://keyboard-layout-editor.com,
+    but not exactly the same.
+    """
+
+    class Group:
+        def __init__(
+            self,
+            count: int = 0,
+            skip: int = 0,
+            row: bool = False,
+            x: float = 0,
+            y: float = 0,
+            w: float = 1,
+            h: float = 1,
+        ):
+            self.count = count
+            self.skip = skip
+            self.row = row
+            self.x = x
+            self.y = y
+            self.w = w
+            self.h = h
+
+    def __init__(self, width: float, height: float, groups: list[Group]):
+        self.width = width
+        self.height = height
+        self.groups = groups
+
+    def get_centers(self) -> list[tuple[float, float]]:
+        points: list[tuple[float, float]] = []
+
+        x: float = 0
+        y: float = 0
+
+        for group in self.groups:
+            if group.row:
+                x = 0
+                y += 1
+
+            x += group.x
+            y += group.y
+
+            for i in range(group.skip):
+                points.append((0, 0))
+
+            for i in range(group.count):
+                points.append((x + group.w/2, y + group.h/2))
+                x += group.w
+
+        return points
+
+
 class Keyboard:
     """Represents a Durgod Taurus keyboard."""
 
@@ -92,6 +148,7 @@ class Keyboard:
         # this is an instance method, because it possibly depends
         # on exact keyboard model
 
+        # TODO: models with a numpad
         return Keymap([  # noqa
             Key.ESC,    Key.NONE,   Key.F1,     Key.F2,     Key.F3,     Key.F4,     Key.F5,
             Key.F6,     Key.F7,     Key.F8,     Key.F9,     Key.F10,    Key.F11,    Key.F12,
@@ -170,3 +227,36 @@ class Keyboard:
             self._write(RgbColormapRowMessage(i, colormap.get_row(i)))
 
         self._write(RgbColormapEndMessage())
+
+    def get_layout(self) -> Layout:
+        # this is an instance method, because it possibly depends
+        # on exact keyboard model
+
+        G = Layout.Group
+
+        # TODO: models with a numpad
+        return Layout(width=18.25, height=6.5, groups=[
+            G(1), G(skip=1, x=1), G(4), G(x=0.5), G(4), G(x=0.5), G(4),
+            G(x=0.25), G(3),
+            G(skip=4),
+
+            G(row=True, y=0.5), G(13), G(1, w=2),
+            G(x=0.25), G(3),
+            G(skip=4),
+
+            G(row=True), G(1, w=1.5), G(12), G(1, w=1.5),
+            G(x=0.25), G(3),
+            G(skip=4),
+
+            G(row=True), G(1, w=1.75), G(11), G(skip=1), G(1, w=2.25),
+            G(skip=3),
+            G(skip=4),
+
+            G(row=True), G(1, w=2.25), G(skip=1), G(10), G(skip=1), G(1, w=2.75),  # noqa
+            G(skip=1, x=1.25), G(1), G(skip=1),
+            G(skip=4),
+
+            G(row=True), G(3, w=1.25), G(skip=3), G(1, w=6.25), G(skip=3), G(4, w=1.25),  # noqa
+            G(x=0.25), G(3),
+            G(skip=4)
+        ])
