@@ -1,4 +1,6 @@
-This is a partial, in-progress reverse-engineering of the protocol used by the [Durgod Zeus Engine], with the aim of being used on the platforms not supported by the Zeus Engine itself (which only supports Windows).
+This is a partial reverse-engineering of the protocol used by the [Durgod Zeus Engine], with the aim of being used on the platforms not supported by the Zeus Engine itself (which only supports Windows).
+
+I don't currently own a Durgod keyboard anymore, so I'm not able to work on this. If you have an improvement idea, feel free to fork this!
 
 Features that are currently supported:
 
